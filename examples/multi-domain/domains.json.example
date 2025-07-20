@@ -1,0 +1,11 @@
+{
+  "primary": "example.com",
+  "alternatives": [
+    "*.example.com",
+    "api.example.com",
+    "www.example.com",
+    "example.net",
+    "www.example.net"
+  ],
+  "email": "admin@example.com"
+}

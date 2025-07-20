@@ -6,7 +6,6 @@ import { Construct } from 'constructs';
 
 export interface CloudFrontCertificateStackProps extends cdk.StackProps {
   domainName: string;
-  environment: 'dev' | 'stg' | 'prd';
   includeWww?: boolean;
   additionalDomains?: string[];
   hostedZoneId?: string;
@@ -20,21 +19,31 @@ export class CloudFrontCertificateStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: CloudFrontCertificateStackProps) {
     super(scope, id, props);
 
-    const { domainName, environment, includeWww = true, additionalDomains = [], hostedZoneId, hostedZoneName } = props;
+    const { domainName, includeWww = true, additionalDomains = [], hostedZoneId, hostedZoneName } = props;
     
     // CloudFront用の証明書は必ずus-east-1リージョンである必要がある
     if (this.region !== 'us-east-1') {
       throw new Error('CloudFront certificates must be created in us-east-1 region');
     }
 
-    // 環境別のドメイン名
-    const fullDomain = environment === 'prd' ? domainName : `${environment}.${domainName}`;
+    // ワイルドカード証明書かどうかを判定
+    const isWildcard = domainName.startsWith('*.');
     
-    // SANs (Subject Alternative Names) の設定
+    // 証明書のプライマリドメイン
+    const certificateDomain = domainName;
     const subjectAlternativeNames: string[] = [];
-    if (includeWww) {
-      subjectAlternativeNames.push(`www.${fullDomain}`);
+    
+    if (isWildcard) {
+      // ワイルドカード証明書の場合、ベースドメインも含める
+      const baseDomain = domainName.substring(2);
+      subjectAlternativeNames.push(baseDomain);
+    } else {
+      // 通常の証明書の場合
+      if (includeWww) {
+        subjectAlternativeNames.push(`www.${domainName}`);
+      }
     }
+    
     if (additionalDomains.length > 0) {
       subjectAlternativeNames.push(...additionalDomains);
     }
@@ -57,17 +66,19 @@ export class CloudFrontCertificateStack extends cdk.Stack {
 
     // CloudFront用証明書の作成（最新のコンストラクトを使用）
     this.certificate = new acm.Certificate(this, 'CloudFrontCertificate', {
-      domainName: `*.${fullDomain}`,
-      subjectAlternativeNames: [fullDomain, ...subjectAlternativeNames],
+      domainName: certificateDomain,
+      subjectAlternativeNames: subjectAlternativeNames.length > 0 ? subjectAlternativeNames : undefined,
       validation,
-      certificateName: `${environment}-${domainName}-cloudfront-certificate`,
+      certificateName: `${domainName.replace(/[*.]/g, '-')}-cloudfront-certificate`,
     });
 
     // 証明書のARNをSSM Parameter Storeに保存（クロスリージョンアクセス用）
+    // ワイルドカード証明書の場合、パラメータ名の*を-wildcard-に置換
+    const parameterSafeDomain = domainName.replace(/^\*\./, 'wildcard.');
     const certificateArnParam = new ssm.StringParameter(this, 'CloudFrontCertificateArnParameter', {
-      parameterName: `/acm/${environment}/${domainName}/cloudfront-certificate-arn`,
+      parameterName: `/acm/${parameterSafeDomain}/cloudfront-certificate-arn`,
       stringValue: this.certificate.certificateArn,
-      description: `CloudFront Certificate ARN for ${fullDomain}`,
+      description: `CloudFront Certificate ARN for ${certificateDomain}`,
       tier: ssm.ParameterTier.STANDARD,
     });
 
@@ -77,11 +88,10 @@ export class CloudFrontCertificateStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'CloudFrontCertificateArn', {
       value: this.certificate.certificateArn,
       description: 'The ARN of the CloudFront certificate',
-      exportName: `${environment}-cloudfront-certificate-arn`,
     });
 
     new cdk.CfnOutput(this, 'CloudFrontCertificateDomains', {
-      value: JSON.stringify([`*.${fullDomain}`, fullDomain, ...subjectAlternativeNames]),
+      value: JSON.stringify([certificateDomain, ...subjectAlternativeNames]),
       description: 'Domains covered by this CloudFront certificate',
     });
 
@@ -91,7 +101,6 @@ export class CloudFrontCertificateStack extends cdk.Stack {
     });
 
     // タグ付け
-    cdk.Tags.of(this).add('Environment', environment);
     cdk.Tags.of(this).add('Service', 'ACM-CloudFront');
     cdk.Tags.of(this).add('ManagedBy', 'CDK');
     cdk.Tags.of(this).add('Region', 'us-east-1');

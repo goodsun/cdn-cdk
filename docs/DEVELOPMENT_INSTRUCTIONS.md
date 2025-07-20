@@ -8,31 +8,39 @@
 
 ### 必須機能
 
-1. **ワイルドカード証明書の作成**
-   - `*.yourdomain.com` 形式のワイルドカード証明書
-   - ルートドメインも含める（SANs）
+1. **対話型CLIツール (create-cdn)**
+   - プロンプトで設定を入力
+   - 自動でプロジェクトテンプレート生成
+   - 環境変数の自動設定
 
-2. **マルチリージョン対応**
-   - API Gateway用: デプロイリージョン
-   - CloudFront用: us-east-1（必須）
+2. **7種類のオリジンタイプ対応**
+   - s3-new: 新規S3バケット（OAC経由）
+   - s3-website-new: 新規S3静的ウェブサイト
+   - s3-website-existing: 既存S3静的ウェブサイト
+   - s3-existing: 既存S3バケット（OAC経由）
+   - http: 既存HTTP/HTTPSサイト
+   - alb: Application Load Balancer
+   - apigateway: API Gateway
 
-3. **証明書ARNの共有**
-   - SSM Parameter Storeに保存
-   - CloudFormation Exportsで公開
+3. **クロスリージョン対応**
+   - CloudFront証明書: us-east-1（必須）
+   - リソース: デプロイリージョン
+   - crossRegionReferencesで自動解決
 
-4. **削除保護**
-   - 誤削除防止のためRETAINポリシー設定
+4. **DNS設定支援**
+   - デプロイ後にDNS設定指示を表示
+   - サブドメインとCloudFrontドメインを明示
 
 ### オプション機能
 
-1. **環境別証明書**
-   - `*.dev.yourdomain.com`
-   - `*.stg.yourdomain.com`
-   - `*.yourdomain.com` (prod)
+1. **証明書監視**
+   - 有効期限アラート
+   - SNSメール通知
+   - CloudWatchアラーム
 
-2. **通知機能**
-   - 証明書の有効期限アラート
-   - 検証完了通知
+2. **既存証明書の使用**
+   - CERTIFICATE_ARN環境変数で指定
+   - 開発環境での再利用
 
 ## 🏗️ アーキテクチャ
 

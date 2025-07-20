@@ -4,32 +4,41 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import { Construct } from 'constructs';
 
-export interface CertificateStackProps extends cdk.StackProps {
+export interface CertificateStackProps {
   domainName: string;
-  environment: 'dev' | 'stg' | 'prd';
   includeWww?: boolean;
   additionalDomains?: string[];
   hostedZoneId?: string;
   hostedZoneName?: string;
 }
 
-export class CertificateStack extends cdk.Stack {
+export class CertificateStack extends Construct {
   public readonly certificate: acm.Certificate;
   public readonly certificateArn: string;
 
   constructor(scope: Construct, id: string, props: CertificateStackProps) {
-    super(scope, id, props);
+    super(scope, id);
 
-    const { domainName, environment, includeWww = true, additionalDomains = [], hostedZoneId, hostedZoneName } = props;
+    const { domainName, includeWww = true, additionalDomains = [], hostedZoneId, hostedZoneName } = props;
     
-    // 環境別のドメイン名
-    const fullDomain = environment === 'prd' ? domainName : `${environment}.${domainName}`;
+    // ワイルドカード証明書かどうかを判定
+    const isWildcard = domainName.startsWith('*.');
     
-    // SANs (Subject Alternative Names) の設定
+    // 証明書のプライマリドメイン
+    const certificateDomain = domainName;
     const subjectAlternativeNames: string[] = [];
-    if (includeWww) {
-      subjectAlternativeNames.push(`www.${fullDomain}`);
+    
+    if (isWildcard) {
+      // ワイルドカード証明書の場合、ベースドメインも含める
+      const baseDomain = domainName.substring(2);
+      subjectAlternativeNames.push(baseDomain);
+    } else {
+      // 通常の証明書の場合
+      if (includeWww) {
+        subjectAlternativeNames.push(`www.${domainName}`);
+      }
     }
+    
     if (additionalDomains.length > 0) {
       subjectAlternativeNames.push(...additionalDomains);
     }
@@ -52,42 +61,26 @@ export class CertificateStack extends cdk.Stack {
 
     // 証明書の作成（最新のコンストラクトを使用）
     this.certificate = new acm.Certificate(this, 'Certificate', {
-      domainName: `*.${fullDomain}`,
-      subjectAlternativeNames: [fullDomain, ...subjectAlternativeNames],
+      domainName: certificateDomain,
+      subjectAlternativeNames: subjectAlternativeNames.length > 0 ? subjectAlternativeNames : undefined,
       validation,
-      certificateName: `${environment}-${domainName}-certificate`,
+      certificateName: `${domainName.replace(/[*.]/g, '-')}-certificate`,
     });
 
     // 証明書のARNをSSM Parameter Storeに保存
+    // ワイルドカード証明書の場合、パラメータ名の*を-wildcard-に置換
+    const parameterSafeDomain = domainName.replace(/^\*\./, 'wildcard.');
     const certificateArnParam = new ssm.StringParameter(this, 'CertificateArnParameter', {
-      parameterName: `/acm/${environment}/${domainName}/certificate-arn`,
+      parameterName: `/acm/${parameterSafeDomain}/certificate-arn`,
       stringValue: this.certificate.certificateArn,
-      description: `Certificate ARN for ${fullDomain}`,
+      description: `Certificate ARN for ${certificateDomain}`,
       tier: ssm.ParameterTier.STANDARD,
     });
 
     this.certificateArn = this.certificate.certificateArn;
 
-    // 出力
-    new cdk.CfnOutput(this, 'CertificateArn', {
-      value: this.certificate.certificateArn,
-      description: 'The ARN of the certificate',
-      exportName: `${environment}-certificate-arn`,
-    });
-
-    new cdk.CfnOutput(this, 'CertificateDomains', {
-      value: JSON.stringify([`*.${fullDomain}`, fullDomain, ...subjectAlternativeNames]),
-      description: 'Domains covered by this certificate',
-    });
-
-    new cdk.CfnOutput(this, 'SSMParameterName', {
-      value: certificateArnParam.parameterName,
-      description: 'SSM Parameter name for certificate ARN',
-    });
-
-    // タグ付け
-    cdk.Tags.of(this).add('Environment', environment);
-    cdk.Tags.of(this).add('Service', 'ACM');
-    cdk.Tags.of(this).add('ManagedBy', 'CDK');
+    // タグ付け（証明書リソースに直接適用）
+    cdk.Tags.of(this.certificate).add('Service', 'ACM');
+    cdk.Tags.of(this.certificate).add('ManagedBy', 'CDK');
   }
 }

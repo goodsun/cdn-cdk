@@ -1,7 +1,7 @@
 # CloudFrontでS3静的サイトを独自ドメインで公開する完全ガイド
 
 ## 概要
-このガイドでは、S3に保存した静的ウェブサイトを、CloudFront経由で独自ドメイン（例：`dev.bon-soleil.com`）でHTTPS公開する手順を、初学者向けに詳しく説明します。
+このガイドでは、S3に保存した静的ウェブサイトを、CloudFront経由で独自ドメイン（例：`example.com`）でHTTPS公開する手順を、初学者向けに詳しく説明します。
 
 ## なぜこの構成が必要なのか？
 
@@ -45,7 +45,7 @@ CloudFrontはAWSのCDN（Content Delivery Network）サービスで：
 
 ### 4. DNS設定
 - **役割**：独自ドメインをCloudFrontに向ける
-- **仕組み**：`dev.bon-soleil.com` → `d3quu6nulwb2s9.cloudfront.net`
+- **仕組み**：`example.com` → `d1234567890.cloudfront.net`
 
 ## ステップバイステップ手順
 
@@ -61,7 +61,7 @@ HTTPSでサイトを公開するには、そのドメインの所有者である
 
 #### 手順
 1. AWS Certificate Managerで証明書をリクエスト
-2. ドメイン名を入力（例：`*.dev.bon-soleil.com`）
+2. ドメイン名を入力（例：`*.example.com`）
    - `*`（ワイルドカード）を使うと、すべてのサブドメインで使える
 
 ### ステップ2: DNS検証
@@ -72,7 +72,7 @@ AWSは「あなたが本当にこのドメインの所有者か」を確認す�
 #### 検証の仕組み
 1. AWSが特殊なDNSレコードを生成
    ```
-   _c98c02a6665d1d364b6a23f2ebedbf4b.dev.bon-soleil.com
+   _xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.example.com
    ```
 
 2. あなたがこのレコードをDNSに追加
@@ -113,7 +113,7 @@ cname _c98c02a6665d1d364b6a23f2ebedbf4b.dev _4da1c2ba6bf8833681ffcf90209788f5.xl
 - セキュリティを確保
 
 ##### 4. Alternate Domain Names (CNAMEs)
-**設定値**：`dev.bon-soleil.com`
+**設定値**：`example.com`
 
 **役割**：
 - CloudFrontに「このドメインでのアクセスを受け付ける」と伝える
@@ -129,7 +129,7 @@ cname _c98c02a6665d1d364b6a23f2ebedbf4b.dev _4da1c2ba6bf8833681ffcf90209788f5.xl
 **設定値**：`index.html`
 
 **意味**：
-- `https://dev.bon-soleil.com/`にアクセスしたとき、自動的に`index.html`を表示
+- `https://example.com/`にアクセスしたとき、自動的に`index.html`を表示
 
 ### ステップ4: DNS設定（最終段階）
 
@@ -139,7 +139,7 @@ cname dev d3quu6nulwb2s9.cloudfront.net.
 ```
 
 #### この設定の意味
-- `dev.bon-soleil.com`へのアクセスを
+- `example.com`へのアクセスを
 - `d3quu6nulwb2s9.cloudfront.net`（CloudFront）に転送
 
 #### 重要：ワイルドカードAレコードとの競合
@@ -163,7 +163,7 @@ CNAMEレコードが効かない場合があります。解決方法：
 **確認方法**：
 ```bash
 # DNS解決の確認
-dig dev.bon-soleil.com
+dig example.com
 
 # 証明書の状態確認
 aws acm describe-certificate --certificate-arn <ARN> --region us-east-1

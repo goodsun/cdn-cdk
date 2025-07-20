@@ -8,21 +8,20 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import { Construct } from 'constructs';
 
-export interface MonitoringStackProps extends cdk.StackProps {
+export interface MonitoringStackProps {
   certificateArns: string[];
   notificationEmail: string;
-  environment: 'dev' | 'stg' | 'prd';
 }
 
-export class MonitoringStack extends cdk.Stack {
+export class MonitoringStack extends Construct {
   constructor(scope: Construct, id: string, props: MonitoringStackProps) {
-    super(scope, id, props);
+    super(scope, id);
 
-    const { certificateArns, notificationEmail, environment } = props;
+    const { certificateArns, notificationEmail } = props;
 
     // SNSトピックの作成
     const alertTopic = new sns.Topic(this, 'CertificateAlertTopic', {
-      topicName: `acm-certificate-alerts-${environment}`,
+      topicName: 'acm-certificate-alerts',
       displayName: 'ACM Certificate Alerts',
     });
 
@@ -162,7 +161,7 @@ DNS検証レコードを確認してください。
 
     // CloudWatchダッシュボード
     const dashboard = new cloudwatch.Dashboard(this, 'CertificateDashboard', {
-      dashboardName: `acm-certificates-${environment}`,
+      dashboardName: 'acm-certificates',
     });
 
     // Lambda関数のメトリクスウィジェット
@@ -180,20 +179,8 @@ DNS検証レコードを確認してください。
       })
     );
 
-    // 出力
-    new cdk.CfnOutput(this, 'AlertTopicArn', {
-      value: alertTopic.topicArn,
-      description: 'SNS Topic ARN for certificate alerts',
-    });
-
-    new cdk.CfnOutput(this, 'DashboardUrl', {
-      value: `https://console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=${dashboard.dashboardName}`,
-      description: 'CloudWatch Dashboard URL',
-    });
-
-    // タグ付け
-    cdk.Tags.of(this).add('Environment', environment);
-    cdk.Tags.of(this).add('Service', 'ACM-Monitoring');
-    cdk.Tags.of(this).add('ManagedBy', 'CDK');
+    // タグ付け（リソースに直接適用）
+    cdk.Tags.of(alertTopic).add('Service', 'ACM-Monitoring');
+    cdk.Tags.of(alertTopic).add('ManagedBy', 'CDK');
   }
 }

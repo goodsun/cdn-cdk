@@ -2,7 +2,6 @@
 node_modules/
 
 # Build outputs
-*.js
 *.d.ts
 !jest.config.js
 
@@ -41,3 +40,8 @@ Thumbs.db
 *.tmp
 *.temp
 dns-validation-records.json
+
+# Test directories
+sandbox/
+test-project/
+test-projects/

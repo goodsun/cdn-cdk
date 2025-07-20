@@ -111,37 +111,45 @@ cdk deploy --require-approval never
 
 ```bash
 # .env.dev
-DOMAIN_NAME=yourdomain.com
-CDK_ENV=dev
+DOMAIN_NAME=dev.yourdomain.com
+ENVIRONMENT=dev
+USE_CLOUDFRONT=true
+ORIGIN_TYPE=s3-new
 
 # デプロイ
-source .env.dev && cdk deploy
+source .env.dev && npm run deploy
 ```
 
-作成される証明書：
-- `*.dev.yourdomain.com`
-- `dev.yourdomain.com`
+作成されるリソース：
+- ACM証明書（us-east-1）: `dev.yourdomain.com`
+- CloudFrontディストリビューション
+- S3バケット（新規作成の場合）
 
 ### ステージング環境
 
 ```bash
 # .env.stg
-DOMAIN_NAME=yourdomain.com
-CDK_ENV=stg
+DOMAIN_NAME=stg.yourdomain.com
+ENVIRONMENT=stg
+USE_CLOUDFRONT=true
+ORIGIN_TYPE=s3-website-new  # SPAサイトの場合
 
 # デプロイ
-source .env.stg && cdk deploy
+source .env.stg && npm run deploy
 ```
 
 ### 本番環境
 
 ```bash
-# .env.prod
+# .env.prd
 DOMAIN_NAME=yourdomain.com
-CDK_ENV=prod
+ENVIRONMENT=prd
+USE_CLOUDFRONT=true
+ORIGIN_TYPE=http  # 既存サイトをCDN化する場合
+ORIGIN_DOMAIN=origin.yourdomain.com
 
-# デプロイ（確認あり）
-source .env.prod && cdk deploy
+# デプロイ（承認あり）
+source .env.prd && npm run deploy
 ```
 
 ## 🔍 DNS検証
@@ -150,7 +158,7 @@ source .env.prod && cdk deploy
 
 ```bash
 # スクリプトを使用
-./scripts/validate-dns.sh
+npm run show-validation
 
 # または手動で
 aws acm describe-certificate \

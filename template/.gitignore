@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+*.js
+*.d.ts
+*.js.map
+!jest.config.js
+dist/
+
+# CDK outputs
+cdk.out/
+.cdk.staging/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test coverage
+coverage/
+*.lcov
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp

@@ -1,8 +1,39 @@
 {
-  "name": "acm-cdk",
-  "version": "2.0.0",
-  "description": "Improved ACM Certificate Management with AWS CDK",
+  "name": "@goodsun/create-cdn",
+  "version": "0.0.3",
+  "description": "CLI tool to easily create AWS CDN with CloudFront and ACM certificates",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "author": "goodsun",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/goodsun/create-cdn.git"
+  },
+  "keywords": [
+    "aws",
+    "cdk",
+    "cdn",
+    "cloudfront",
+    "acm",
+    "certificate"
+  ],
+  "bugs": {
+    "url": "https://github.com/goodsun/create-cdn/issues"
+  },
+  "homepage": "https://github.com/goodsun/create-cdn#readme",
+  "bin": {
+    "create-cdn": "./bin/create-cdn.js",
+    "create-cert": "./bin/create-cert.js"
+  },
+  "files": [
+    "lib",
+    "bin",
+    "template",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
@@ -12,7 +43,8 @@
     "deploy:all": "npm run build && cdk deploy --all",
     "destroy": "cdk destroy --all",
     "synth": "npm run build && cdk synth",
-    "validate": "npm run build && node scripts/validate-certificates.js"
+    "validate": "npm run build && node scripts/validate-certificates.js",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@types/aws-sdk": "^0.0.42",
@@ -27,8 +59,11 @@
   },
   "dependencies": {
     "aws-cdk-lib": "^2.130.0",
+    "chalk": "^4.1.2",
     "constructs": "^10.3.0",
     "dotenv": "^16.4.5",
+    "fs-extra": "^11.3.0",
+    "inquirer": "^8.2.6",
     "source-map-support": "^0.5.21"
   }
 }

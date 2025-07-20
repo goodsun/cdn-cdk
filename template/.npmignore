@@ -1,0 +1,29 @@
+# Source files
+*.ts
+!*.d.ts
+
+# Config files
+tsconfig.json
+.env*
+
+# CDK files
+cdk.out/
+.cdk.staging/
+
+# Development files
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Test files
+coverage/
+__tests__/
+*.test.js
+*.test.d.ts
+jest.config.js
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store

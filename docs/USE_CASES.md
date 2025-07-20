@@ -1,61 +1,61 @@
-# ACM CDK 実際の使用場面
+# CDN CDK 実際の使用場面
 
 ## 1. 新規Webサービス立ち上げ時
 
 ### シナリオ
-既存ドメイン（example.com）で新しいWebサービスを開始する。
+新しいWebサービスをCloudFront + S3で高速配信する。
 
 ### 実際の手順
 
 ```bash
-# 1. 環境設定
-cp .env.example .env
-vim .env
-```
+# 1. 対話型CLIでプロジェクト作成
+npx create-cdn my-service
 
-```env
-DOMAIN_NAME=example.com
-ENVIRONMENT=dev
-NOTIFICATION_EMAIL=devops@example.com
+# プロンプトに答える：
+# 🌐 ドメイン名: example.com
+# ☁️  CloudFrontを使用: Y
+# 📦 オリジンタイプ: 新規S3バケット（OAC経由・推奨）
+# 📧 通知メール: admin@example.com
 ```
 
 ```bash
-# 2. 証明書の作成
+# 2. デプロイ
+cd my-service
 npm install
-npm run deploy:all
+npm run deploy
 
 # 出力例：
-# ACM-Certificate-dev.CertificateArn = arn:aws:acm:ap-northeast-1:123456:certificate/xxx
-# ACM-CloudFront-Certificate-dev.CloudFrontCertificateArn = arn:aws:acm:us-east-1:123456:certificate/yyy
+# BucketName: example-com-content
+# DistributionDomain: d1234567890.cloudfront.net
+# CloudFrontURL: https://example.com
+# DNSRecordName: example
+# DNSRecordValue: d1234567890.cloudfront.net
 ```
 
 ```bash
-# 3. DNS検証（お名前.comの場合）
-npx ts-node scripts/dns-validation-helper.ts \
-  arn:aws:acm:ap-northeast-1:123456:certificate/xxx 0
+# 3. DNS設定
+# デプロイ完了後に表示される指示に従ってDNSを設定
 
-# 以下のような出力が表示される：
-# 
-# お名前.comでの設定方法:
-# 1. お名前.comの管理画面にログイン
-# 2. DNS関連機能設定 > DNS設定/転送設定を選択
-# 3. 対象ドメインを選択
-# 4. DNSレコード設定を選択
-# 5. 以下のCNAMEレコードを追加:
-# 
-# ホスト名: _abc123.dev.example.com
+# お名前.comの場合:
+# ホスト名: example
 # タイプ: CNAME
-# 値: _def456.acm-validations.aws.
+# 値: d1234567890.cloudfront.net
+
+# Cloudflareの場合:
+# Type: CNAME
+# Name: example.com
+# Target: d1234567890.cloudfront.net
+# Proxy: OFF（重要）
 ```
 
 ```bash
-# 4. 検証完了を待つ
-npx ts-node scripts/dns-validation-helper.ts \
-  arn:aws:acm:ap-northeast-1:123456:certificate/xxx 0 --wait
+# 4. コンテンツのアップロード
+aws s3 sync ./dist s3://example-com-content/
 
-# 5. ALBやCloudFrontで証明書を使用
-# SSM Parameter Storeから証明書ARNを取得
-aws ssm get-parameter --name /acm/dev/example.com/certificate-arn
+# 5. キャッシュの無効化（更新時）
+aws cloudfront create-invalidation \
+  --distribution-id E1234567890ABC \
+  --paths "/*"
 ```
 
 ## 2. マルチ環境での運用
@@ -64,151 +64,195 @@ aws ssm get-parameter --name /acm/dev/example.com/certificate-arn
 開発・ステージング・本番環境で異なるサブドメインを使用。
 
 ### 環境構成
-- 開発: dev.example.com
-- ステージング: stg.example.com  
-- 本番: example.com
+- 開発: dev.example.com（S3新規）
+- ステージング: stg.example.com（S3静的ウェブサイト）  
+- 本番: example.com（既存Webサーバー）
 
 ### 実際の運用
 
 ```bash
-# 開発環境
-ENVIRONMENT=dev npm run deploy:all
+# 開発環境（新規S3バケット）
+npx create-cdn dev-example
+# オリジンタイプ: s3-newを選択
 
-# ステージング環境
-ENVIRONMENT=stg npm run deploy:all
+# ステージング環境（SPAサイト）
+npx create-cdn stg-example  
+# オリジンタイプ: s3-website-newを選択
 
-# 本番環境
-ENVIRONMENT=prd npm run deploy:all
+# 本番環境（既存サイトをCDN化）
+npx create-cdn prd-example
+# オリジンタイプ: httpを選択
+# オリジンドメイン: origin.example.com
 ```
 
-### 各環境での証明書
-- dev: `*.dev.example.com`, `dev.example.com`
-- stg: `*.stg.example.com`, `stg.example.com`
-- prd: `*.example.com`, `example.com`, `www.example.com`
+### 各環境の特徴
+- dev: OACでセキュアなS3アクセス
+- stg: 静的ウェブサイトホスティングでSPA対応
+- prd: 既存サーバーをそのまま使用
 
 ## 3. 既存インフラへの統合
 
 ### シナリオ
-10年以上運用している既存サービスに、段階的にAWSサービスを追加。
+長年運用している既存サービスをCloudFrontで高速化。
 
 ### 現状
 - ドメイン管理：さくらインターネット
-- Webサーバー：オンプレミス
-- 新規追加：S3 + CloudFront（静的コンテンツ配信）
+- Webサーバー：オンプレミス（www.example.com）
+- 新規追加：CloudFrontでキャッシュ高速化
 
 ### 実装手順
 
 ```bash
-# 1. CloudFront用証明書のみ作成
-cdk deploy ACM-CloudFront-Certificate-prd
+# 1. 既存サイトをオリジンとしてCloudFrontを作成
+npx create-cdn example-cdn
 
-# 2. さくらインターネットでDNS検証
-npx ts-node scripts/dns-validation-helper.ts \
-  arn:aws:acm:us-east-1:123456:certificate/zzz 1
+# プロンプトで以下を選択：
+# ドメイン名: www.example.com
+# オリジンタイプ: 既存のWebサイト（HTTP/HTTPS）
+# オリジンドメイン: origin-www.example.com
 
-# 3. 既存サーバーはそのまま、CDNだけAWSを使用
-# cdn.example.com → CloudFront → S3
-# www.example.com → 既存サーバー（変更なし）
+# 2. デプロイ
+cd example-cdn
+npm install
+npm run deploy
+
+# 3. DNS切り替え
+# 既存: www.example.com → origin-www.example.com（CNAME変更）
+# 新規: www.example.com → d1234567890.cloudfront.net（CNAME追加）
 ```
 
-## 4. 証明書の自動更新と監視
+## 4. API Gatewayとの統合
 
-### ACMの自動更新機能
-ACMは証明書を**自動的に更新**します。通常、人手での対応は不要です。
+### シナリオ
+REST APIをCloudFront経由で配信し、グローバルな高速アクセスを実現。
 
-### 監視が必要な理由
-自動更新が失敗する可能性があるケース：
-- DNS検証レコードが削除された
-- ドメインの所有権が変更された
-- DNSプロバイダーを移行した際の設定漏れ
-
-### 異常時のアラート例
-
-```
-件名: [エラー] ACM証明書の自動更新に失敗しました
-
-証明書の自動更新に問題が発生しました。
-
-証明書ARN: arn:aws:acm:ap-northeast-1:123456:certificate/xxx
-ドメイン: example.com
-現在の状態: FAILED
-失敗理由: DNS validation records were not found
-
-DNS検証レコードが見つかりません。すぐに確認が必要です。
-```
-
-### 対応手順（異常時のみ）
+### 実装手順
 
 ```bash
-# 1. 証明書の状態確認
-aws acm describe-certificate --certificate-arn arn:aws:acm:...
+# 1. API Gateway向けCloudFrontを作成
+npx create-cdn api-cdn
 
-# 2. DNS検証レコードの再設定
-npx ts-node scripts/dns-validation-helper.ts arn:aws:acm:... 0
-
-# 3. DNSプロバイダーで検証レコードを追加
-# （手順はヘルパーツールが表示）
+# プロンプトで以下を選択：
+# ドメイン名: api.example.com
+# オリジンタイプ: API Gateway
+# オリジンドメイン: xxxxxx.execute-api.ap-northeast-1.amazonaws.com
+# オリジンパス: /prod
 ```
 
-**重要**: 正常に運用されていれば、これらの作業は不要です。
+### API Gateway向けの特別設定
+- キャッシュ無効化（動的APIのため）
+- すべてのHTTPメソッドを許可
+- カスタムヘッダーでホスト情報を転送
 
-## 5. トラブルシューティング実例
+## 5. S3静的ウェブサイトホスティング（SPA対応）
 
-### ケース1：DNS検証が完了しない
+### シナリオ
+React/Vue/AngularのSPAをS3 + CloudFrontでホスティング。
+
+### 実装手順
+
+```bash
+# 1. SPA用CloudFrontを作成
+npx create-cdn spa-example
+
+# プロンプトで以下を選択：
+# オリジンタイプ: 新規S3バケット（静的ウェブサイトホスティング）
+```
+
+### SPA向けの特別設定
+- 404エラーをindex.htmlにリダイレクト（クライアントサイドルーティング対応）
+- S3はHTTP_ONLYプロトコルを使用
+- パブリックアクセスを許可
+
+## 6. 既存証明書の使用（開発環境）
+
+### シナリオ
+既に取得済みのACM証明書を使用してCloudFrontを作成。
+
+### 実装手順
+
+```bash
+# 1. 既存証明書のARNを環境変数に設定
+export CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/xxx
+
+# 2. プロジェクト作成
+npx create-cdn dev-site
+
+# 3. .envファイルを編集
+cd dev-site
+vi .env
+# CERTIFICATE_ARNのコメントを外してARNを設定
+
+# 4. デプロイ
+npm install
+npm run deploy
+```
+
+## 7. トラブルシューティング実例
+
+### ケース1：CloudFrontからS3にアクセスできない
 
 ```bash
 # 問題の診断
-nslookup _abc123.example.com
+curl -I https://example.com
+# 403 Forbidden
 
-# DNSレコードが見つからない場合
-# → DNSプロバイダーで設定を確認
+# 解決方法：
+# 1. オリジンタイプを確認
+# - s3-new/s3-existing → OACを使用
+# - s3-website-new/s3-website-existing → パブリックアクセス
 
-# TTLが長い場合
-# → 最大48時間待つ
+# 2. S3バケットポリシーを確認
+aws s3api get-bucket-policy --bucket example-com-content
 ```
 
-### ケース2：証明書の状態がFAILED
-
-```
-件名: [エラー] ACM証明書の検証に失敗しました
-
-証明書の検証に失敗しました。
-
-証明書ARN: arn:aws:acm:ap-northeast-1:123456:certificate/xxx
-ドメイン: example.com
-検証状態: FAILED
-
-DNS検証レコードを確認してください。
-```
+### ケース2：CloudFrontキャッシュが更新されない
 
 ```bash
-# 新しい証明書を作成
-cdk destroy ACM-Certificate-dev
-cdk deploy ACM-Certificate-dev
+# キャッシュを無効化
+aws cloudfront create-invalidation \
+  --distribution-id E1234567890ABC \
+  --paths "/*"
 
-# DNS検証をやり直す
-npx ts-node scripts/dns-validation-helper.ts <新しいARN> 0
+# 特定ファイルのみ無効化
+aws cloudfront create-invalidation \
+  --distribution-id E1234567890ABC \
+  --paths "/index.html" "/css/style.css"
+
+# 無効化の状態確認
+aws cloudfront get-invalidation \
+  --distribution-id E1234567890ABC \
+  --id I1234567890ABC
 ```
 
-## 6. コスト最適化の実例
+## 8. コスト最適化の実例
 
-### Before（個別証明書）
-- api.example.com用証明書
-- admin.example.com用証明書  
-- app.example.com用証明書
-- www.example.com用証明書
+### CloudFrontの料金最適化
 
-### After（ワイルドカード証明書）
-- *.example.com（すべてカバー）
-- コスト：$0（ACMは無料）
-- 管理：1つの証明書のみ
+```bash
+# 1. 適切なキャッシュ設定
+# 静的コンテンツ: 長期キャッシュ
+Cache-Control: public, max-age=31536000
+
+# 2. 圧縮を有効化
+# CloudFrontが自動でgzip圧縮
+
+# 3. 不要なログの無効化
+# CloudFrontアクセスログをオフ
+```
+
+### 月額コスト目安
+| 構成 | 月間10万PV | 月間100万PV |
+|------|-----------|-------------|
+| S3 + CloudFront | 約500円 | 約2,000円 |
+| キャッシュ率高 | 約300円 | 約1,200円 |
 
 ## まとめ
 
-このACM CDKは以下のような実際の課題を解決します：
+このCDN CDKは以下のような実際の課題を解決します：
 
-1. **既存環境との共存** - Route53なしでも使える
-2. **運用の自動化** - 期限切れの心配なし
-3. **環境別管理** - dev/stg/prdを簡単に分離
-4. **コスト削減** - ワイルドカード証明書で統一
-5. **トラブル対応** - 明確な手順とアラート
+1. **簡単セットアップ** - 対話型CLIで5分で構築
+2. **柔軟なオリジン対応** - 7種類のオリジンタイプをサポート
+3. **セキュリティ** - OACやHTTPS強制などベストプラクティスを自動適用
+4. **コスト最適化** - 適切なキャッシュ設定で料金を抑制
+5. **DNS設定支援** - デプロイ後に明確なDNS設定指示を表示
