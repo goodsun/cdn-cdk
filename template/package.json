@@ -4,17 +4,12 @@
   "description": "CDN project created with create-cdn",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
     "cdk": "cdk",
-    "pre-deploy": "node scripts/pre-deploy.js",
-    "deploy": "npm run pre-deploy && npm run build && cdk deploy --all",
-    "deploy:dev": "npm run build && cdk deploy --all -c environment=dev",
-    "deploy:prod": "npm run build && cdk deploy --all -c environment=prod",
+    "deploy": "cdk deploy --all",
+    "deploy:dev": "cdk deploy --all -c environment=dev",
+    "deploy:prod": "cdk deploy --all -c environment=prod",
     "destroy": "cdk destroy --all",
-    "bootstrap": "cdk bootstrap",
-    "show-validation": "node scripts/show-dns-validation.js",
-    "check-validation": "node scripts/show-dns-validation.js --check",
-    "register-wildcard": "node scripts/register-wildcard-cert.js"
+    "bootstrap": "cdk bootstrap"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -24,7 +19,6 @@
   },
   "dependencies": {
     "aws-cdk-lib": "^2.130.0",
-    "create-cdn": "^0.0.1",
     "constructs": "^10.0.0",
     "dotenv": "^16.4.5",
     "source-map-support": "^0.5.21",

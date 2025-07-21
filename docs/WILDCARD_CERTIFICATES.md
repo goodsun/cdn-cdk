@@ -4,66 +4,42 @@
 
 ワイルドカード証明書を使用すると、単一の証明書で複数のサブドメインをカバーできます。例えば、`*.example.com` の証明書は `www.example.com`、`api.example.com`、`blog.example.com` など、すべてのサブドメインで使用できます。
 
-## ⚠️ 重要な仕様
+## 🚀 推奨される使用方法
 
-**ワイルドカード証明書（`*.example.com`）を選択した場合：**
-- ✅ ACM証明書のみが作成されます
-- ❌ CloudFrontディストリビューションは作成されません
-- ❌ S3バケットは作成されません
-
-これは、CloudFrontがワイルドカードドメイン（`*.example.com`）をCNAMEとして受け付けないためです。CloudFrontを使用する場合は、具体的なドメイン名（`www.example.com`など）で再度実行してください。
-
-## 🚀 設定方法
-
-### 1. CLIでプロジェクト作成時
+### 1. ワイルドカード証明書の作成（create-cert）
 
 ```bash
-create-cdn my-website
+# create-certツールで証明書を作成
+create-cert
 
-# プロンプトでドメイン名を入力
-ドメイン名を入力してください: *.example.com
+# プロンプトでの入力例：
+# ドメイン名: *.example.com
+# リージョン: 1 (us-east-1 CloudFront用)
+# 追加ドメイン: example.com  # ルートドメインも含める
 ```
 
-### 2. 既存プロジェクトの設定変更
+### 2. CDNプロジェクトの作成（create-cdn）
 
-`.env` ファイルを編集：
+ワイルドカード証明書作成後、具体的なサブドメインでCDNを構築：
 
 ```bash
-# ワイルドカード証明書の設定
-DOMAIN_NAME=*.example.com
+# 具体的なサブドメインでCDNを作成
+create-cdn www-example
+
+# プロンプトでの入力例：
+# ドメイン名: www.example.com
+# CloudFront使用: Y
+# → 既存の*.example.com証明書が自動的に検出・使用されます
 ```
 
-### 3. 作成した証明書を使用してCloudFrontを構築
+## ✨ 自動化された証明書の再利用
 
-ワイルドカード証明書作成後、具体的なドメインでCloudFrontを構築する場合：
+create-cdnツールは既存のワイルドカード証明書を自動的に検出します：
 
-1. 新しいプロジェクトを作成（具体的なドメイン名で）
-   ```bash
-   create-cdn www-example
-   # ドメイン名: www.example.com
-   ```
+1. **証明書の自動検索**: `create-cdn`実行時に、入力されたドメインに適合する証明書を検索
+2. **SSMへの自動登録**: 検出された証明書をSSMパラメータストアに自動登録
+3. **即座に利用可能**: DNS検証の待ち時間なしでデプロイ可能
 
-2. 既存の証明書を使用するようにCDKコードをカスタマイズ
-
-### 4. ルートドメインとワイルドカードの両方を使用
-
-ルートドメイン（example.com）とワイルドカード（*.example.com）の両方を使用する場合は、CDKコードをカスタマイズする必要があります：
-
-```typescript
-// lib/acm-cdk-stack.ts を編集
-const certificate = new acm.Certificate(this, 'Certificate', {
-  domainName: '*.example.com',
-  subjectAlternativeNames: ['example.com'], // ルートドメインを追加
-  validation: acm.CertificateValidation.fromDns(hostedZone),
-});
-
-// CloudFrontディストリビューションの設定も更新
-const distribution = new cloudfront.Distribution(this, 'Distribution', {
-  domainNames: ['*.example.com', 'example.com'],
-  certificate: certificate,
-  // ... その他の設定
-});
-```
 
 ## ⚠️ 注意事項
 
@@ -77,40 +53,38 @@ const distribution = new cloudfront.Distribution(this, 'Distribution', {
 
 ### 2. 複数レベルのワイルドカード
 
-複数レベルのサブドメインをカバーする場合：
+複数レベルのサブドメインをカバーする場合は、それぞれのレベルで証明書が必要です：
 
-```typescript
-// 複数のワイルドカード証明書が必要
-const certificate = new acm.Certificate(this, 'Certificate', {
-  domainName: '*.example.com',
-  subjectAlternativeNames: [
-    'example.com',
-    '*.api.example.com',
-    '*.dev.example.com'
-  ],
-  validation: acm.CertificateValidation.fromDns(hostedZone),
-});
+```bash
+# 第一レベル用
+create-cert
+# → ドメイン: *.example.com
+
+# 第二レベル用（別途作成）
+create-cert
+# → ドメイン: *.api.example.com
 ```
 
 ### 3. DNS検証の設定
 
-ワイルドカード証明書のDNS検証では、以下のCNAMEレコードを設定する必要があります：
-
-```
-_acmechallengetoken.example.com → ACMが提供する値
-```
+create-certツールが表示するDNS検証レコードを設定します。詳細は[DNSプロバイダー別ガイド](dns/)を参照してください。
 
 ## 🔍 トラブルシューティング
 
 ### 証明書の発行が完了しない
 
-1. Route 53でDNS検証レコードが正しく設定されているか確認
-2. ドメインの所有権が正しいか確認
-3. CloudFormationスタックのイベントでエラーメッセージを確認
+```bash
+# 証明書の状態を確認
+create-cert --list
+
+# PENDING_VALIDATIONの場合：
+# 1. 表示されたDNS検証レコードが正しく設定されているか確認
+# 2. DNSの伝播を待つ（通常5-30分）
+```
 
 ### ルートドメインが動作しない
 
-ワイルドカード証明書（`*.example.com`）はルートドメイン（`example.com`）をカバーしません。両方必要な場合は、上記の「ルートドメインとワイルドカードの両方を使用」を参照してください。
+ワイルドカード証明書（`*.example.com`）はルートドメイン（`example.com`）をカバーしません。create-certで証明書作成時に、追加ドメインとしてルートドメインを含めてください。
 
 ## 📚 関連ドキュメント
 

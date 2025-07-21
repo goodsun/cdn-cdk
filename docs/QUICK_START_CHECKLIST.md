@@ -54,10 +54,24 @@ CDN を構築する前に、以下の項目を確認してください。この�
 
 ## 📝 セットアップ手順
 
-### Step 1: プロジェクト作成（対話型）
+### Step 0: ツールのインストール
 
 ```bash
-npx create-cdn my-website
+# グローバルインストール
+npm install -g @goodsun/create-cdn
+```
+
+### Step 1: 証明書の事前作成（推奨）
+
+```bash
+# SSL証明書を作成
+create-cert
+```
+
+### Step 2: CDNプロジェクト作成（対話型）
+
+```bash
+create-cdn my-website
 ```
 
 対話型プロンプトで以下を設定：
@@ -75,39 +89,35 @@ npx create-cdn my-website
 - 証明書の有効期限監視設定
 - 通知先メールアドレス
 
-### Step 2: プロジェクトに移動
+### Step 3: プロジェクトのセットアップとデプロイ
 
 ```bash
+# プロジェクトに移動
 cd my-website
-```
 
-### Step 3: 環境変数の確認・編集
-
-```bash
+# 環境変数の確認・編集（必要に応じて）
 vi .env
-# 自動生成された設定を確認
-```
 
-### Step 4: 依存関係インストール
-
-```bash
+# 依存関係インストール
 npm install
-```
 
-### Step 5: デプロイ
-
-```bash
+# デプロイ実行
 npm run deploy
 ```
 
-### Step 6: DNS 設定
+### Step 4: DNS 設定
 
 デプロイ完了後に表示される指示に従って DNS を設定：
 
-```
-Type: CNAME
-Name: [表示されたサブドメイン]
-Value: [表示されたCloudFrontドメイン]
+```bash
+# デプロイ完了後の表示例：
+📌 DNSに以下のレコードを追加してください：
+タイプ: CNAME
+名前: example.com
+値: d3quu6nulwb2s9.cloudfront.net
+
+# 既存のCDNを確認する場合
+create-cdn --list
 ```
 
 ## ⚠️ よくあるエラーと対処法

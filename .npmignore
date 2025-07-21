@@ -31,8 +31,11 @@ cdk.json
 .cdk.staging/
 
 # Environment files
-.env
-.env.*
+/.env
+/.env.*
+
+# But include template examples
+!template/.env.example
 
 # AWS SDK credentials
 .aws/

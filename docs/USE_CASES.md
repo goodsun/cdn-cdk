@@ -9,7 +9,7 @@
 
 ```bash
 # 1. 対話型CLIでプロジェクト作成
-npx create-cdn my-service
+create-cdn my-service
 
 # プロンプトに答える：
 # 🌐 ドメイン名: example.com

@@ -32,7 +32,7 @@
 ### 1. インストール
 
 ```bash
-npm install -g create-cdn
+npm install -g @goodsun/create-cdn
 ```
 
 ### 2. 証明書の作成

@@ -4,34 +4,37 @@
 
 AWS Certificate Manager (ACM) で証明書を作成する際、ドメインの所有権を証明するためにDNS検証が必要です。この検証プロセスには通常5-30分程度かかります。
 
-## 🚨 重要な注意事項
+## 🚀 推奨される手順（create-certツール使用）
 
-**デプロイが一時停止する理由**：
-- `npm run deploy` 実行時、証明書の作成段階で一時停止します
-- これは**正常な動作**です
-- DNS検証が完了するまで待機しています
-
-## 📝 DNS検証の手順
-
-### 1. デプロイを開始
+### 1. 証明書の作成
 
 ```bash
-npm run deploy
+create-cert
 ```
 
-### 2. CNAMEレコードの確認
+create-certツールが即座にDNS検証レコードを表示します：
 
-デプロイが一時停止したら、以下のいずれかの方法でCNAMEレコードを確認：
+```
+📝 DNS検証に必要なCNAMEレコード:
+以下のレコードをDNSに追加してください:
 
-#### 方法1: AWS ACMコンソール
-1. [AWS ACMコンソール](https://console.aws.amazon.com/acm/)を開く
-2. 作成中の証明書を選択
-3. 「ドメイン」タブでCNAMEレコードを確認
+  レコードタイプ: CNAME
+  名前: _xxxxxxxx.example.com
+  値: _yyyyyyyy.acm-validations.aws.
 
-#### 方法2: AWS CLI
+💡 DNSレコードに追加する場合（コピペ用）:
+cname _xxxxxxxx _yyyyyyyy.acm-validations.aws.
+```
+
+### 2. 証明書の状態確認
+
 ```bash
-aws acm list-certificates --region ap-northeast-1
-aws acm describe-certificate --certificate-arn <証明書ARN> --region ap-northeast-1
+# 証明書の一覧と状態を確認
+create-cert --list
+
+# ステータスの意味：
+# - PENDING_VALIDATION: DNS検証待ち
+# - ISSUED: 検証完了（使用可能）
 ```
 
 ### 3. DNSレコードの追加
