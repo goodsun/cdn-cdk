@@ -14,6 +14,7 @@ const config = {
   account: process.env.CDK_DEFAULT_ACCOUNT || app.node.tryGetContext('account'),
   region: process.env.CDK_DEFAULT_REGION || app.node.tryGetContext('region') || 'ap-northeast-1',
   domain: process.env.DOMAIN_NAME || app.node.tryGetContext('domain'),
+  certificateArn: process.env.CERTIFICATE_ARN || app.node.tryGetContext('certificateArn'),
   useCloudFront: process.env.USE_CLOUDFRONT === 'true' || app.node.tryGetContext('useCloudFront'),
   originType: process.env.ORIGIN_TYPE || app.node.tryGetContext('originType') || 's3-new',
   originDomain: process.env.ORIGIN_DOMAIN || app.node.tryGetContext('originDomain'),
@@ -55,6 +56,11 @@ if (config.domain.startsWith('*.')) {
 
 // Generate unique stack name based on domain
 const stackName = `CdnStack-${config.domain.replace(/\./g, '-').replace(/\*/g, 'wildcard')}`;
+
+// Set certificate ARN in context if available
+if (config.certificateArn) {
+  app.node.setContext('certificateArn', config.certificateArn);
+}
 
 // Create the CDN stack
 new CdnStack(app, stackName, {

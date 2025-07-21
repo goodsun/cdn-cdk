@@ -4,6 +4,8 @@
   "description": "CDN project created with create-cdn",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
     "cdk": "cdk",
     "deploy": "cdk deploy --all",
     "deploy:dev": "cdk deploy --all -c environment=dev",

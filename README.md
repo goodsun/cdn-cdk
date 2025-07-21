@@ -43,7 +43,7 @@ create-cert
 # → ワイルドカード証明書: *.example.com（全サブドメインで利用可能）
 
 # 証明書の確認
-create-cert --list
+create-cert --list  # 削除コマンドも表示されます
 ```
 
 ### CDN の作成とデプロイ
@@ -61,7 +61,7 @@ npm run deploy
 ### 管理コマンド
 ```bash
 # デプロイ済みCDNの確認
-create-cdn --list
+create-cdn --list  # スタック削除コマンドも表示されます
 
 # 証明書の管理
 create-cert --help
@@ -389,6 +389,22 @@ aws ce get-cost-and-usage \
   --granularity DAILY \
   --metrics "BlendedCost" \
   --group-by Type=DIMENSION,Key=SERVICE
+```
+
+## 🧪 テスト
+
+### E2Eテスト
+
+実際のAWS環境を使用した完全なエンドツーエンドテストが可能です：
+
+- [E2Eテスト完全ガイド](docs/E2E_TEST_GUIDE.md) - DNS設定からテスト実行まで
+- [クイックリファレンス](docs/E2E_TEST_QUICK_REFERENCE.md) - コマンド集とトラブルシューティング
+- [アーキテクチャ説明](test-scenarios/E2E_TEST_ARCHITECTURE.md) - 技術的な詳細
+
+### ユニットテスト
+
+```bash
+npm test
 ```
 
 ## 🤝 コントリビューション

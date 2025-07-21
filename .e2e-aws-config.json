@@ -1,0 +1,21 @@
+{
+  "hostedZoneId": "Z06786531H0THJ7OP3DLZ",
+  "baseDomain": "aws.bon-soleil.com",
+  "testEnvironments": {
+    "e2e": {
+      "domain": "e2e.aws.bon-soleil.com",
+      "subdomains": [
+        "test1.e2e.aws.bon-soleil.com",
+        "test2.e2e.aws.bon-soleil.com",
+        "test3.e2e.aws.bon-soleil.com"
+      ]
+    },
+    "dev": {
+      "domain": "dev.aws.bon-soleil.com",
+      "wildcard": "*.dev.aws.bon-soleil.com"
+    },
+    "demo": {
+      "domain": "demo.aws.bon-soleil.com"
+    }
+  }
+}

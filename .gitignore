@@ -45,3 +45,20 @@ dns-validation-records.json
 sandbox/
 test-project/
 test-projects/
+test-project-*/
+e2e-workspace/
+
+# Test files
+test-*.js
+test-*.sh
+example-*.txt
+
+# Test reports
+test-reports/
+
+# Compiled JavaScript in lib
+lib/*.js
+lib/*.js.map
+
+# Mock files
+mock-*.js

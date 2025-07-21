@@ -1,0 +1,59 @@
+{
+  "testDomains": {
+    "primary": "test.example.com",
+    "wildcard": "*.test.example.com",
+    "multiDomain": [
+      "test1.example.com",
+      "test2.example.com",
+      "test3.example.com"
+    ]
+  },
+  "mockDNSRecords": {
+    "_acme-challenge.test.example.com": {
+      "type": "TXT",
+      "value": "mock-validation-token-123456",
+      "ttl": 300
+    },
+    "_acme-challenge.test1.example.com": {
+      "type": "TXT",
+      "value": "mock-validation-token-test1",
+      "ttl": 300
+    },
+    "_acme-challenge.test2.example.com": {
+      "type": "TXT",
+      "value": "mock-validation-token-test2",
+      "ttl": 300
+    }
+  },
+  "mockCertificateArns": {
+    "us-east-1": "arn:aws:acm:us-east-1:123456789012:certificate/mock-cert-id-1",
+    "ap-northeast-1": "arn:aws:acm:ap-northeast-1:123456789012:certificate/mock-cert-id-2"
+  },
+  "mockValidationOptions": [
+    {
+      "DomainName": "test.example.com",
+      "ValidationDomain": "test.example.com",
+      "ValidationStatus": "PENDING_VALIDATION",
+      "ResourceRecord": {
+        "Name": "_acme-challenge.test.example.com",
+        "Type": "CNAME",
+        "Value": "_validation.acm.amazonaws.com"
+      }
+    }
+  ],
+  "testScenarios": {
+    "successfulValidation": {
+      "delay": 5000,
+      "status": "SUCCESS"
+    },
+    "validationTimeout": {
+      "delay": 60000,
+      "status": "TIMEOUT"
+    },
+    "validationFailure": {
+      "delay": 3000,
+      "status": "FAILED",
+      "error": "DNS record not found"
+    }
+  }
+}

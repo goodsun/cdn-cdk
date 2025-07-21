@@ -1,0 +1,56 @@
+🌐 create-cdn で作成されたCDNスタック一覧
+
+📍 リージョン: us-east-1
+────────────────────────────────────────────────────────────────────────────────
+
+  スタック名: CdnStack-test-20250722-044426-e2e-aws-bon-soleil-com
+  ├─ ドメイン: test-20250722-044426.e2e.aws.bon-soleil.com
+  ├─ ステータス: CREATE_COMPLETE
+  ├─ 作成日時: 2025/07/22 13:45:23
+  ├─ CloudFront: ✅ 有効
+  │  └─ d3vyotik2bseg7.cloudfront.net
+  │  └─ DNS設定: cname test-20250722-044426 d3vyotik2bseg7.cloudfront.net.
+  ├─ 証明書: .../74731343-c268-486f-834a-da306ecffd35
+  ├─ 🌐 Route 53 ホストゾーン: Z06786531H0THJ7OP3DLZ
+  ├─ 📋 削除コマンド:
+  │  └─ aws cloudformation delete-stack --stack-name CdnStack-test-20250722-044426-e2e-aws-bon-soleil-com --region us-east-1
+  ├─ 🌐 Route 53レコード削除:
+  │  └─ aws route53 list-resource-record-sets --hosted-zone-id Z06786531H0THJ7OP3DLZ --query "ResourceRecordSets[?Name=='test-20250722-044426.e2e.aws.bon-soleil.com.']"
+  └─ 🔐 証明書削除コマンド:
+     └─ aws acm delete-certificate --certificate-arn arn:aws:acm:us-east-1:498997347996:certificate/74731343-c268-486f-834a-da306ecffd35 --region us-east-1
+
+  スタック名: CdnStack-www-example-com
+  ├─ ドメイン: www.example.com
+  ├─ ステータス: CREATE_COMPLETE
+  ├─ 作成日時: 2025/07/20 10:30:15
+  ├─ CloudFront: ✅ 有効
+  │  └─ d1234567890abc.cloudfront.net
+  │  └─ DNS設定: cname www d1234567890abc.cloudfront.net.
+  ├─ 証明書: .../abc12345-6789-def0-1234-567890abcdef
+  ├─ 🌐 Route 53 ホストゾーン: Z0123456789ABC
+  ├─ 📋 削除コマンド:
+  │  └─ aws cloudformation delete-stack --stack-name CdnStack-www-example-com --region us-east-1
+  ├─ 🌐 Route 53レコード削除:
+  │  └─ aws route53 list-resource-record-sets --hosted-zone-id Z0123456789ABC --query "ResourceRecordSets[?Name=='www.example.com.']"
+  └─ 🔐 証明書削除コマンド:
+     └─ aws acm delete-certificate --certificate-arn arn:aws:acm:us-east-1:498997347996:certificate/abc12345-6789-def0-1234-567890abcdef --region us-east-1
+
+  スタック名: CdnStack-wildcard-example-com
+  ├─ ドメイン: *.example.com
+  ├─ ステータス: CREATE_COMPLETE
+  ├─ 作成日時: 2025/07/19 15:20:10
+  ├─ CloudFront: ❌ 無効（証明書のみ）
+  ├─ 証明書: .../def45678-9012-3456-7890-abcdef123456
+  ├─ 📋 削除コマンド:
+  │  └─ aws cloudformation delete-stack --stack-name CdnStack-wildcard-example-com --region us-east-1
+  └─ 🔐 証明書削除コマンド:
+     └─ aws acm delete-certificate --certificate-arn arn:aws:acm:us-east-1:498997347996:certificate/def45678-9012-3456-7890-abcdef123456 --region us-east-1
+
+────────────────────────────────────────────────────────────────────────────────
+
+合計: 3 個のCDNスタック
+
+💡 ヒント:
+  • スタックの詳細を確認: aws cloudformation describe-stacks --stack-name <スタック名> --region <リージョン>
+  • スタックを削除: cd <プロジェクトディレクトリ> && npm run destroy
+  • 新しいCDNを作成: create-cdn <プロジェクト名>

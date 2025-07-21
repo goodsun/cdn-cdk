@@ -29,13 +29,24 @@ export class CdnStack extends cdk.Stack {
     // Create or use existing certificate
     let certificate: acm.ICertificate;
     
-    // 証明書を取得（既存のワイルドカード証明書があれば使用）
-    certificate = CertificateUtils.getOrCreateCertificate(
-      this,
-      'Certificate',
-      props.domain,
-      this.region
-    );
+    // 環境変数から既存の証明書ARNがある場合はそれを使用
+    const existingCertArn = process.env.CERTIFICATE_ARN || this.node.tryGetContext('certificateArn');
+    if (existingCertArn) {
+      console.log(`\n📋 既存の証明書を使用: ${existingCertArn}`);
+      certificate = acm.Certificate.fromCertificateArn(
+        this,
+        'Certificate',
+        existingCertArn
+      );
+    } else {
+      // 証明書を取得（既存のワイルドカード証明書があれば使用）
+      certificate = CertificateUtils.getOrCreateCertificate(
+        this,
+        'Certificate',
+        props.domain,
+        this.region
+      );
+    }
 
     if (props.useCloudFront) {
       let origin;
@@ -52,7 +63,7 @@ export class CdnStack extends cdk.Stack {
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             autoDeleteObjects: true
           });
-          origin = new origins.S3Origin(bucket);
+          origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
           break;
           
         case 's3-website-new':
@@ -96,7 +107,7 @@ export class CdnStack extends cdk.Stack {
             'ExistingBucket', 
             props.originDomain!
           );
-          origin = new origins.S3Origin(existingBucket);
+          origin = origins.S3BucketOrigin.withOriginAccessControl(existingBucket);
           break;
           
         case 's3-website-existing':

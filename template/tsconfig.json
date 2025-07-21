@@ -18,12 +18,11 @@
     "emitDecoratorMetadata": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist",
+    "outDir": "./",
     "rootDir": "./"
   },
   "exclude": [
     "node_modules",
-    "cdk.out",
-    "dist"
+    "cdk.out"
   ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "@goodsun/create-cdn",
-  "version": "0.0.13",
+  "version": "0.0.15",
   "description": "CLI tool to easily create AWS CDN with CloudFront and ACM certificates",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

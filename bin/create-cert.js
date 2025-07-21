@@ -76,7 +76,9 @@ function displayHelp() {
   console.log();
   console.log("  # 全リージョンの証明書を一覧表示");
   console.log("  $ create-cert --list");
-  console.log("  → ドメイン名、ステータス、有効期限、ARNを確認");
+  console.log("  → ドメイン名、ステータス、有効期限、ARN、削除コマンドを表示");
+  console.log("  → 関連するCloudFormationスタックの削除コマンドも推定表示");
+  console.log("  → Route 53レコードの確認コマンドも表示");
   console.log();
   console.log("  # 証明書を削除（対話形式）");
   console.log("  $ create-cert --delete");
@@ -148,11 +150,11 @@ async function listCertificates() {
           console.log(chalk.gray(`  ├─ ステータス: ${statusColor}`));
           console.log(chalk.gray(`  ├─ ARN: .../${arnId}`));
 
-          // 詳細情報を取得（作成日と有効期限）
+          // 詳細情報を取得（作成日、有効期限、使用状況）
           try {
-            const detailCmd = `aws acm describe-certificate --certificate-arn "${cert.CertificateArn}" --region ${region} --query "Certificate.[CreatedAt,NotAfter]" --output json 2>/dev/null`;
+            const detailCmd = `aws acm describe-certificate --certificate-arn "${cert.CertificateArn}" --region ${region} --query "Certificate.[CreatedAt,NotAfter,InUseBy]" --output json 2>/dev/null`;
             const detailResult = execSync(detailCmd, { encoding: "utf8" });
-            const [createdAt, notAfter] = JSON.parse(detailResult);
+            const [createdAt, notAfter, inUseBy] = JSON.parse(detailResult);
 
             if (createdAt) {
               const created = new Date(createdAt).toLocaleDateString("ja-JP");
@@ -169,7 +171,7 @@ async function listCertificates() {
               if (daysUntilExpiry < 30) {
                 console.log(
                   chalk.gray(
-                    `  └─ 有効期限: ${chalk.red(
+                    `  ├─ 有効期限: ${chalk.red(
                       expiryDate
                     )} (${daysUntilExpiry}日後)`
                   )
@@ -177,13 +179,69 @@ async function listCertificates() {
               } else {
                 console.log(
                   chalk.gray(
-                    `  └─ 有効期限: ${expiryDate} (${daysUntilExpiry}日後)`
+                    `  ├─ 有効期限: ${expiryDate} (${daysUntilExpiry}日後)`
                   )
                 );
               }
             }
+
+            // 使用中のリソースを表示
+            if (inUseBy && inUseBy.length > 0) {
+              console.log(chalk.gray(`  ├─ 使用中: ${chalk.yellow("Yes")}`));
+              inUseBy.forEach((resource, idx) => {
+                const isLast = idx === inUseBy.length - 1;
+                const prefix = isLast ? "  │  └─" : "  │  ├─";
+                console.log(chalk.gray(`${prefix} ${resource.split('/').pop()}`));
+              });
+            }
+
+            // 削除コマンドを表示
+            console.log(chalk.gray(`  ├─ 📋 削除コマンド:`));
+            console.log(chalk.gray(`  │  └─ ${chalk.cyan(`aws acm delete-certificate --certificate-arn ${cert.CertificateArn} --region ${region}`)}`));
+
+            // CloudFormationスタックの検索と削除コマンド
+            if (cert.DomainName.includes('.e2e.') || cert.DomainName.includes('test-')) {
+              const stackName = `CdnStack-${cert.DomainName.replace(/\./g, '-')}`;
+              console.log(chalk.gray(`  ├─ 🗄️  関連スタック削除コマンド (推定):`));
+              console.log(chalk.gray(`  │  └─ ${chalk.cyan(`aws cloudformation delete-stack --stack-name ${stackName} --region ${region}`)}`));
+            }
+
+            // Route 53レコードの確認コマンド
+            // ドメインからホストゾーンIDを検索
+            let hostedZoneId = null;
+            try {
+              const baseDomain = cert.DomainName.startsWith('*.') 
+                ? cert.DomainName.substring(2) 
+                : cert.DomainName;
+              
+              // ドメインの各レベルで検索
+              const domainParts = baseDomain.split('.');
+              for (let i = 0; i < domainParts.length - 1; i++) {
+                const searchDomain = domainParts.slice(i).join('.');
+                const zoneCmd = `aws route53 list-hosted-zones-by-name --query "HostedZones[?Name==\\\`${searchDomain}.\\\`].Id" --output json 2>/dev/null`;
+                const zoneResult = execSync(zoneCmd, { encoding: "utf8" });
+                const zones = JSON.parse(zoneResult);
+                
+                if (zones && zones.length > 0) {
+                  hostedZoneId = zones[0].split('/').pop();
+                  break;
+                }
+              }
+            } catch (e) {
+              // Zone ID取得エラーは無視
+            }
+
+            console.log(chalk.gray(`  └─ 🌐 Route 53レコード確認:`));
+            if (hostedZoneId) {
+              const namePattern = cert.DomainName.startsWith('*.') ? '*' : cert.DomainName.split('.')[0];
+              console.log(chalk.gray(`     └─ ${chalk.cyan(`aws route53 list-resource-record-sets --hosted-zone-id ${hostedZoneId} --query "ResourceRecordSets[?contains(Name, '${namePattern}')]"`)}`));
+            } else {
+              console.log(chalk.gray(`     └─ ${chalk.cyan(`aws route53 list-resource-record-sets --hosted-zone-id <ZONE_ID> --query "ResourceRecordSets[?contains(Name, '${cert.DomainName.split('.')[0]}')]"`)}`));
+            }
           } catch (e) {
             // 詳細情報が取得できない場合はスキップ
+            console.log(chalk.gray(`  └─ 📋 削除コマンド:`));
+            console.log(chalk.gray(`     └─ ${chalk.cyan(`aws acm delete-certificate --certificate-arn ${cert.CertificateArn} --region ${region}`)}`));
           }
 
           console.log();

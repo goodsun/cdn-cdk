@@ -24,7 +24,7 @@ ${chalk.yellow("使用方法:")}
   create-cdn --help
 
 ${chalk.yellow("オプション:")}
-  -l, --list     デプロイ済みCDNスタックの一覧を表示
+  -l, --list     デプロイ済みCDNスタックの一覧と削除コマンドを表示
   -v, --version  バージョンを表示
   -h, --help     ヘルプを表示
 
@@ -169,6 +169,32 @@ async function listCdnStacks() {
               }
             }
 
+            // Route 53のホストゾーンIDを取得
+            let hostedZoneId = null;
+            if (domainName && domainName !== "Unknown" && !domainName.startsWith("*.")) {
+              try {
+                // ドメインから親ドメインを抽出（例: test.example.com -> example.com）
+                const domainParts = domainName.split(".");
+                let searchDomain = domainName;
+                
+                // 複数のレベルで検索（test.sub.example.com -> sub.example.com -> example.com）
+                for (let i = 0; i < domainParts.length - 1; i++) {
+                  searchDomain = domainParts.slice(i).join(".");
+                  
+                  const zoneCmd = `aws route53 list-hosted-zones-by-name --query "HostedZones[?Name==\\\`${searchDomain}.\\\`].Id" --output json 2>/dev/null`;
+                  const zoneResult = execSync(zoneCmd, { encoding: "utf8" });
+                  const zones = JSON.parse(zoneResult);
+                  
+                  if (zones && zones.length > 0) {
+                    hostedZoneId = zones[0].split("/").pop();
+                    break;
+                  }
+                }
+              } catch (e) {
+                // Zone ID取得エラーは無視
+              }
+            }
+
             allStacks.push({
               stackName: stack.StackName,
               region: region,
@@ -181,6 +207,7 @@ async function listCdnStacks() {
               hasCloudFront: hasCloudFront,
               distributionDomain: distributionDomain,
               certificateArn: certificateArn,
+              hostedZoneId: hostedZoneId,
             });
           } catch (e) {
             // 詳細取得エラーは無視
@@ -275,7 +302,31 @@ async function listCdnStacks() {
 
         if (stack.certificateArn) {
           const certId = stack.certificateArn.split("/").pop();
-          console.log(chalk.gray(`  └─ 証明書: .../${certId}`));
+          console.log(chalk.gray(`  ├─ 証明書: .../${certId}`));
+        }
+
+        // Route 53ホストゾーンIDを表示
+        if (stack.hostedZoneId) {
+          console.log(chalk.gray(`  ├─ 🌐 Route 53 ホストゾーン: ${stack.hostedZoneId}`));
+        }
+
+        // 削除コマンドを表示
+        console.log(chalk.gray(`  ├─ 📋 削除コマンド:`));
+        console.log(chalk.gray(`  │  └─ ${chalk.cyan(`aws cloudformation delete-stack --stack-name ${stack.stackName} --region ${region}`)}`));
+        
+        // Route 53レコード削除コマンド
+        if (stack.hostedZoneId && stack.domainName && stack.hasCloudFront) {
+          const recordName = stack.domainName.split('.')[0];
+          console.log(chalk.gray(`  ├─ 🌐 Route 53レコード削除:`));
+          console.log(chalk.gray(`  │  └─ ${chalk.cyan(`aws route53 list-resource-record-sets --hosted-zone-id ${stack.hostedZoneId} --query "ResourceRecordSets[?Name=='${stack.domainName}.']"`)}`));
+        }
+        
+        // 証明書削除コマンドも表示
+        if (stack.certificateArn) {
+          console.log(chalk.gray(`  └─ 🔐 証明書削除コマンド:`));
+          console.log(chalk.gray(`     └─ ${chalk.cyan(`aws acm delete-certificate --certificate-arn ${stack.certificateArn} --region ${region}`)}`));
+        } else {
+          console.log(chalk.gray(`  └─ `));
         }
 
         totalStacks++;

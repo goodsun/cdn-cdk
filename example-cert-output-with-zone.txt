@@ -1,0 +1,25 @@
+実装した機能の説明:
+
+`create-cert -l` コマンドを改善し、Route 53のZone IDを自動的に検出して表示するようにしました。
+
+改善前:
+└─ 🌐 Route 53レコード確認:
+   └─ aws route53 list-resource-record-sets --hosted-zone-id <ZONE_ID> --query "ResourceRecordSets[?contains(Name, '*')]"
+
+改善後（Zone IDが見つかった場合）:
+└─ 🌐 Route 53レコード確認:
+   └─ aws route53 list-resource-record-sets --hosted-zone-id Z06786531H0THJ7OP3DLZ --query "ResourceRecordSets[?contains(Name, '*')]"
+
+実装内容:
+1. 証明書のドメイン名から親ドメインを抽出
+   - *.goodsun.tokyo → goodsun.tokyo
+   - test.example.com → example.com
+
+2. Route 53でホストゾーンを検索
+   - aws route53 list-hosted-zones-by-name コマンドを使用
+   - 複数レベルのドメインに対応（sub.example.com → example.com）
+
+3. Zone IDが見つかった場合は自動的に挿入
+   - 見つからない場合は従来通り <ZONE_ID> と表示
+
+これにより、Route 53で管理されているドメインの場合、コピー＆ペーストですぐに使えるコマンドが表示されます。
