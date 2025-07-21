@@ -53,8 +53,11 @@ if (config.domain.startsWith('*.')) {
   }
 }
 
+// Generate unique stack name based on domain
+const stackName = `CdnStack-${config.domain.replace(/\./g, '-').replace(/\*/g, 'wildcard')}`;
+
 // Create the CDN stack
-new CdnStack(app, 'CdnStack', {
+new CdnStack(app, stackName, {
   env: {
     account: config.account,
     region: config.region
