@@ -9,7 +9,7 @@ CLI tool to easily create AWS CDN with CloudFront and ACM certificates
 
 ## 📦 ツール構成
 
-このパッケージは2つの独立したツールで構成されています：
+このパッケージは3つの独立したツールで構成されています：
 
 ### 1. create-cert - SSL/TLS証明書管理ツール
 AWS Certificate Manager (ACM)でSSL/TLS証明書を作成・管理
@@ -25,7 +25,13 @@ CloudFront CDNの構築・デプロイツール
 - S3、ALB、既存Webサイトなど多様なオリジンに対応
 - 証明書の自動検出と再利用
 
-**推奨フロー**: `create-cert`で証明書を事前作成 → `create-cdn`でCDNを構築
+### 3. create-route53 - Route53 DNS設定ヘルパー
+Route53のDNS設定を自動化（[詳細ドキュメント](./docs/route53-setup.md)）
+- ACM証明書のDNS検証レコードを自動設定
+- CloudFrontエイリアスレコードの自動設定
+- ホストゾーンの自動検出
+
+**推奨フロー**: `create-cert`で証明書を事前作成 → `create-cdn`でCDNを構築 → `create-route53`でDNS設定
 
 ## クイックスタート
 
@@ -56,6 +62,9 @@ cd my-cdn
 vi .env
 npm install
 npm run deploy
+
+# Route53を使用している場合、デプロイ後に表示されるコマンドでDNS設定
+# 例: create-route53 --cloudfront d1234567890.cloudfront.net --domain www.example.com
 ```
 
 ### 管理コマンド

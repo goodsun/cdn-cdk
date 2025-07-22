@@ -1,9 +1,8 @@
 # Source files
-*.ts
+# Allow TypeScript files to be included in npm package
 !*.d.ts
 
 # Config files
-tsconfig.json
 .env*
 
 # CDK files

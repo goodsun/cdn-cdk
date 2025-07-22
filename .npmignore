@@ -1,6 +1,5 @@
 # Source files
-*.ts
-!lib/*.d.ts
+# TypeScript source files are now included for templates
 
 # Test files
 test/

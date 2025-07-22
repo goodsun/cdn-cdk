@@ -230,6 +230,17 @@ export class CdnStack extends cdk.Stack {
         description: 'Value Domain specific setup'
       });
 
+      // Route53自動設定コマンド
+      new cdk.CfnOutput(this, 'Route53SetupCommand', {
+        value: `create-route53 --cloudfront ${distribution.distributionDomainName} --domain ${props.domain}`,
+        description: 'Command to automatically set up Route53 DNS record'
+      });
+
+      new cdk.CfnOutput(this, 'Route53SetupNote', {
+        value: `Route53を使用している場合は上記のコマンドでDNSレコードを自動設定できます`,
+        description: 'Note about Route53 automation'
+      });
+
       new cdk.CfnOutput(this, 'DistributionId', {
         value: distribution.distributionId,
         description: 'CloudFront distribution ID'
