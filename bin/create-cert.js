@@ -658,6 +658,18 @@ async function main() {
       );
     }
 
+    // Route 53での検証方法を表示
+    console.log(
+      chalk.cyan(
+        "\n💡 Route 53で検証する場合:"
+      )
+    );
+    console.log(
+      chalk.white(
+        `create-route53 --cert-arn ${certificateArn}`
+      )
+    );
+
     // SSMパラメータへの保存を提案
     if (domain.startsWith("*.")) {
       const parameterName = `/acm/wildcard.${domain.substring(
@@ -665,7 +677,7 @@ async function main() {
       )}/certificate-arn`;
       console.log(
         chalk.cyan(
-          "💡 ヒント: CDKで使用するために、以下のコマンドでSSMに保存できます:"
+          "\n💡 証明書をSSMパラメータストアに保存する場合:"
         )
       );
       console.log(
