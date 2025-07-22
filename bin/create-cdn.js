@@ -544,6 +544,49 @@ async function main() {
         );
       }
 
+      // ワイルドカード証明書の自動検出
+      if (config.domain && config.domain.split('.').length >= 3 && config.useCloudFront) {
+        console.log(chalk.yellow(`\n🔍 ワイルドカード証明書を検索中...`));
+        
+        // 複数のレベルでワイルドカード証明書を検索
+        const domainParts = config.domain.split('.');
+        let foundCertArn = null;
+        
+        // より上位のワイルドカードから検索（例: *.bon-soleil.com, *.aws.bon-soleil.com）
+        for (let i = domainParts.length - 2; i >= 1; i--) {
+          const baseDomain = domainParts.slice(i).join('.');
+          const wildcardDomain = `*.${baseDomain}`;
+          
+          try {
+            const certListOutput = execSync(
+              `aws acm list-certificates --region us-east-1 --query "CertificateSummaryList[?DomainName=='${wildcardDomain}' && Status=='ISSUED'].CertificateArn | [0]" --output text`,
+              {
+                encoding: "utf8",
+                stdio: ["pipe", "pipe", "ignore"],
+              }
+            ).trim();
+            
+            if (certListOutput && certListOutput !== 'None' && certListOutput.includes(':certificate/')) {
+              console.log(chalk.green(`✅ ワイルドカード証明書を検出しました: ${wildcardDomain}`));
+              console.log(chalk.gray(`   ARN: ${certListOutput}`));
+              console.log(chalk.gray(`   この証明書を自動的に使用します`));
+              foundCertArn = certListOutput;
+              break;
+            }
+          } catch (e) {
+            // エラーは無視
+          }
+        }
+        
+        if (foundCertArn) {
+          // 証明書ARNを.envに追加（コメントアウトを解除）
+          envContent = envContent.replace(
+            /# CERTIFICATE_ARN=.*/,
+            `CERTIFICATE_ARN=${foundCertArn}`
+          );
+        }
+      }
+
       // Update origin settings
       if (config.originType && !isWildcard) {
         envContent = envContent.replace(

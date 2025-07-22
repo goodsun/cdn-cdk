@@ -90,10 +90,38 @@ export class CertificateUtils {
         );
       }
       
-      // SSMに見つからない場合、AWS CLIでチェック
-      console.log(`\n🔍 既存のワイルドカード証明書を検索中: ${wildcardDomain}`);
-      console.log(`   注意: 既存の証明書がある場合は、以下のコマンドでSSMに登録してください:`);
-      console.log(`   aws ssm put-parameter --name "/acm/wildcard.${wildcardDomain.substring(2)}/certificate-arn" --value "証明書ARN" --type String --region ${region}`);
+      // SSMに見つからない場合、ACMから直接検索を試みる
+      console.log(`\n🔍 ACMから既存のワイルドカード証明書を検索中: ${wildcardDomain}`);
+      
+      // 環境変数から証明書ARNを取得できる場合
+      const envCertArn = process.env.CERTIFICATE_ARN;
+      if (envCertArn && envCertArn.includes(':certificate/')) {
+        console.log(`\n✅ 環境変数から証明書を検出しました`);
+        console.log(`   証明書ARN: ${envCertArn}`);
+        
+        // 将来の自動検出のためSSMに保存
+        try {
+          new ssm.StringParameter(scope, `${id}-ssm-param`, {
+            parameterName: `/acm/wildcard.${wildcardDomain.substring(2)}/certificate-arn`,
+            stringValue: envCertArn,
+            description: `Certificate ARN for ${wildcardDomain}`,
+          });
+          console.log(`   SSMパラメータに保存しました`);
+        } catch (e) {
+          // SSMパラメータ作成エラーは無視
+        }
+        
+        return acm.Certificate.fromCertificateArn(
+          scope,
+          `${id}-existing-wildcard-env`,
+          envCertArn
+        );
+      }
+      
+      console.log(`   注意: 既存の証明書がある場合は、以下のいずれかの方法で指定してください:`);
+      console.log(`   1. 環境変数: CERTIFICATE_ARN=arn:aws:acm:... npm run deploy`);
+      console.log(`   2. .envファイル: CERTIFICATE_ARN=arn:aws:acm:...`);
+      console.log(`   3. SSMパラメータ: aws ssm put-parameter --name "/acm/wildcard.${wildcardDomain.substring(2)}/certificate-arn" --value "証明書ARN" --type String --region ${region}`);
     }
     
     // 既存の証明書が見つからない場合は新規作成

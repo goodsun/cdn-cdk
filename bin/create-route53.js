@@ -1,14 +1,23 @@
 #!/usr/bin/env node
 
-const AWS = require("aws-sdk");
 const chalk = require("chalk");
 const inquirer = require("inquirer");
 const { Command } = require("commander");
 const fs = require("fs-extra");
 const path = require("path");
 
-const route53 = new AWS.Route53();
-const acm = new AWS.ACM({ region: "us-east-1" });
+// AWS SDKの初期化を遅延させて警告を先に表示
+let AWS;
+let route53;
+let acm;
+
+function initializeAWS() {
+  if (!AWS) {
+    AWS = require("aws-sdk");
+    route53 = new AWS.Route53();
+    acm = new AWS.ACM({ region: "us-east-1" });
+  }
+}
 
 const program = new Command();
 
@@ -81,6 +90,8 @@ async function main() {
 async function listHostedZones() {
   console.log(chalk.yellow("📋 Route53ホストゾーン一覧を取得中...\n"));
 
+  initializeAWS(); // AWS SDKを初期化
+
   try {
     const result = await route53.listHostedZones().promise();
     
@@ -115,6 +126,7 @@ async function listHostedZones() {
 async function findHostedZone(domain) {
   console.log(chalk.yellow(`🔍 ${domain} のホストゾーンを検索中...`));
 
+  initializeAWS(); // AWS SDKを初期化
   const result = await route53.listHostedZones().promise();
   
   // 完全一致を優先、次に親ドメインを検索
@@ -158,6 +170,8 @@ async function findHostedZone(domain) {
 
 async function setupCertificateDnsValidation(certArn) {
   console.log(chalk.yellow("\n🔐 証明書のDNS検証レコードを設定します...\n"));
+
+  initializeAWS(); // AWS SDKを初期化
 
   // リージョンを抽出
   const region = certArn.split(":")[3];
@@ -291,6 +305,7 @@ async function setupCloudFrontAlias() {
 
   console.log(chalk.yellow(`\n☁️  CloudFrontエイリアスレコードを設定します...\n`));
 
+  initializeAWS(); // AWS SDKを初期化
   const hostedZone = await findHostedZone(domain);
   const zoneId = hostedZone.Id.replace("/hostedzone/", "");
 
@@ -344,6 +359,8 @@ async function setupCloudFrontAlias() {
 
 async function checkDnsRecords(domain) {
   console.log(chalk.yellow(`\n🔍 ${domain} のDNSレコードを確認中...\n`));
+
+  initializeAWS(); // AWS SDKを初期化
 
   try {
     const hostedZone = await findHostedZone(domain);
